@@ -30,6 +30,7 @@ const UserManagementFormSchema = () => {
       )
       .optional(),
     primaryRole: z.string().optional(),
+    systemId: z.string().optional(),
   });
 
   return { userManagementFormSchema };

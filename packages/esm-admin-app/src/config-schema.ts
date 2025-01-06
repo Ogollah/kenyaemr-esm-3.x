@@ -59,3 +59,9 @@ export interface UserRoleSchema {
   description: string;
   category: string;
 }
+
+export interface Provider {
+  uuid: string;
+  identifier: string;
+  retired: boolean;
+}

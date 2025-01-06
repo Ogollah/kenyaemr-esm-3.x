@@ -29,7 +29,13 @@ import {
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import classNames from 'classnames';
-import { createUser, handleMutation, useRoles, usePersonAttribute } from '../../../user-management.resources';
+import {
+  createUser,
+  handleMutation,
+  useRoles,
+  usePersonAttribute,
+  useProvider,
+} from '../../../user-management.resources';
 import UserManagementFormSchema from '../userManagementFormSchema';
 import { CardHeader } from '@openmrs/esm-patient-common-lib/src';
 import { ChevronSortUp } from '@carbon/react/icons';
@@ -95,6 +101,7 @@ const ManageUserWorkspace: React.FC<ManageUserWorkspaceProps> = ({
   const { roles = [], isLoading } = useRoles();
   const { rolesConfig, error } = useSystemUserRoleConfigSetting();
   const { attributeTypes = [] } = usePersonAttribute();
+  const { provider = [] } = useProvider(initialUserValue.systemId);
 
   useEffect(() => {
     if (isDirty) {
@@ -105,6 +112,7 @@ const ManageUserWorkspace: React.FC<ManageUserWorkspaceProps> = ({
   const onSubmit = async (data: UserFormSchema) => {
     const emailAttribute = attributeTypes.find((attr) => attr.name === 'Email address')?.uuid || '';
     const telephoneAttribute = attributeTypes.find((attr) => attr.name === 'Telephone contact')?.uuid || '';
+    const setProvider = data.providerIdentifiers;
     const payload: Partial<User> = {
       username: data.username,
       password: data.password,
@@ -136,7 +144,7 @@ const ManageUserWorkspace: React.FC<ManageUserWorkspaceProps> = ({
     };
 
     try {
-      const response = await createUser(payload, initialUserValue?.uuid ?? '');
+      const response = await createUser(payload, setProvider, initialUserValue?.uuid ?? '');
 
       if (response.ok) {
         showSnackbar({
@@ -339,13 +347,34 @@ const ManageUserWorkspace: React.FC<ManageUserWorkspaceProps> = ({
                         </ResponsiveWrapper>
                       </ResponsiveWrapper>
                     )}
-
                     {activeSection === 'provider' && (
                       <ResponsiveWrapper>
                         <CardHeader title="Provider Details">
                           <ChevronSortUp />
                         </CardHeader>
-                        <ResponsiveWrapper>
+
+                        {provider.length > 0 ? (
+                          <>
+                            <ResponsiveWrapper>
+                              <Controller
+                                name="systemId"
+                                control={userFormMethods.control}
+                                render={({ field }) => (
+                                  <TextInput
+                                    {...field}
+                                    id="systemeId"
+                                    type="text"
+                                    labelText={t('providerId', 'Provider Id')}
+                                    placeholder={t('providerId', 'Provider Id')}
+                                    invalid={!!errors.email}
+                                    invalidText={errors.email?.message}
+                                    className={styles.checkboxLabelSingleLine}
+                                  />
+                                )}
+                              />
+                            </ResponsiveWrapper>
+                          </>
+                        ) : (
                           <Controller
                             name="providerIdentifiers"
                             control={userFormMethods.control}
@@ -364,7 +393,7 @@ const ManageUserWorkspace: React.FC<ManageUserWorkspaceProps> = ({
                               </CheckboxGroup>
                             )}
                           />
-                        </ResponsiveWrapper>
+                        )}
                       </ResponsiveWrapper>
                     )}
 
