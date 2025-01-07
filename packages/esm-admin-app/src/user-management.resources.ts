@@ -1,6 +1,6 @@
 import { openmrsFetch, restBaseUrl } from '@openmrs/esm-framework';
 import useSWR, { mutate } from 'swr';
-import { Provider, Role, User } from './config-schema';
+import { AttributeType, Provider, ProviderAttributes, Role, User } from './config-schema';
 
 export const useUser = () => {
   const url = `${restBaseUrl}/user?v=custom:(uuid,username,display,systemId,retired,person:(uuid,display,gender,names:(givenName,familyName,middleName),attributes:(uuid,display)),roles:(uuid,description,display,name))`;
@@ -26,12 +26,12 @@ export const postUser = async (user: Partial<User>, url: string) => {
   return response.json();
 };
 
-export const createProvider = async (uuid: string, identifier: string) => {
+export const createProvider = async (uuid: string, identifier: string, attributes: Partial<Provider>) => {
   const providerUrl = `${restBaseUrl}/provider`;
   const providerBody = {
     person: uuid,
     identifier: identifier,
-    attributes: [],
+    ...attributes,
     retired: false,
   };
 
@@ -44,7 +44,12 @@ export const createProvider = async (uuid: string, identifier: string) => {
   });
 };
 
-export const createUser = async (user: Partial<User>, setProvider: boolean, uuid?: string) => {
+export const createUser = async (
+  user: Partial<User>,
+  setProvider: boolean,
+  attributes: Partial<Provider>,
+  uuid?: string,
+) => {
   const url = uuid ? `${restBaseUrl}/user/${uuid}` : `${restBaseUrl}/user`;
 
   const response = await postUser(user, url);
@@ -52,7 +57,7 @@ export const createUser = async (user: Partial<User>, setProvider: boolean, uuid
   if (setProvider && response.person && response.person.uuid) {
     const personUUID = response.person.uuid;
     const identifier = response.systemId;
-    return await createProvider(personUUID, identifier);
+    return await createProvider(personUUID, identifier, attributes);
   }
 
   return response;
@@ -77,7 +82,7 @@ export const useRoles = () => {
 
 export const usePersonAttribute = () => {
   const url = `${restBaseUrl}/personattributetype?v=custom:(name,uuid)`;
-  const { data, isLoading, error } = useSWR<{ data: { results: Array<Role> } }>(url, openmrsFetch, {
+  const { data, isLoading, error } = useSWR<{ data: { results: Array<AttributeType> } }>(url, openmrsFetch, {
     errorRetryCount: 2,
   });
   return {
@@ -88,12 +93,24 @@ export const usePersonAttribute = () => {
 };
 
 export const useProvider = (systemId: string) => {
-  const url = `${restBaseUrl}/provider?q=${systemId}&v=custom:(uuid,identifier,retired)`;
-  const { data, isLoading, error } = useSWR<{ data: { results: Array<Provider> } }>(url, openmrsFetch, {
+  const url = `${restBaseUrl}/provider?q=${systemId}&v=custom:(uuid,identifier,retired,attributes:(value:(name),attributeType:(uuid,name)))`;
+  const { data, isLoading, error } = useSWR<{ data: { results: Array<ProviderAttributes> } }>(url, openmrsFetch, {
     errorRetryCount: 2,
   });
   return {
     provider: data?.data?.results,
+    loadingProvider: isLoading,
+    providerError: error,
+  };
+};
+
+export const useProviderAttributeType = () => {
+  const url = `${restBaseUrl}/providerattributetype?v=custom:(uuid,name,display)`;
+  const { data, isLoading, error } = useSWR<{ data: { results: Array<AttributeType> } }>(url, openmrsFetch, {
+    errorRetryCount: 2,
+  });
+  return {
+    providerAttributeType: data?.data?.results,
     isLoading,
     error,
   };

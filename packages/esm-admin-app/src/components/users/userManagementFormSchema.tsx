@@ -31,6 +31,9 @@ const UserManagementFormSchema = () => {
       .optional(),
     primaryRole: z.string().optional(),
     systemId: z.string().optional(),
+    primaryFacility: z.string().optional(),
+    providerLicense: z.string().optional(),
+    licenseExpiryDate: z.string().optional(),
   });
 
   return { userManagementFormSchema };

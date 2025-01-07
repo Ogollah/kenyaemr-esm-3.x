@@ -35,12 +35,13 @@ import {
   useRoles,
   usePersonAttribute,
   useProvider,
+  useProviderAttributeType,
 } from '../../../user-management.resources';
 import UserManagementFormSchema from '../userManagementFormSchema';
 import { CardHeader } from '@openmrs/esm-patient-common-lib/src';
 import { ChevronSortUp } from '@carbon/react/icons';
 import { useSystemUserRoleConfigSetting } from '../../hook/useSystemRoleSetting';
-import { User } from '../../../config-schema';
+import { Provider, User } from '../../../config-schema';
 
 type ManageUserWorkspaceProps = DefaultWorkspaceProps & {
   initialUserValue?: User;
@@ -58,24 +59,66 @@ const ManageUserWorkspace: React.FC<ManageUserWorkspaceProps> = ({
 
   const { userManagementFormSchema } = UserManagementFormSchema();
 
+  const { providerAttributeType = [] } = useProviderAttributeType();
+  const providerLicenseAttributeType =
+    providerAttributeType.find((type) => type.name === 'Practising License Number')?.uuid || '';
+  const licenseExpiryDateAttributeType =
+    providerAttributeType.find((type) => type.name === 'License Expiry Date')?.uuid || '';
+
+  const { provider = [], loadingProvider, providerError } = useProvider(initialUserValue.systemId);
+
+  function getProviderAttributes() {
+    if (!Array.isArray(provider)) {
+      return [];
+    }
+    return provider.flatMap((item) => item.attributes || []);
+  }
+
+  function getProviderLicenseNumber() {
+    const providerAttributes = getProviderAttributes();
+    const providerLicense = providerAttributes.find(
+      (attr) => attr.attributeType?.uuid === providerLicenseAttributeType && attr.value,
+    );
+    return providerLicense?.value || '';
+  }
+
+  function getProviderLicenseExpiryDate() {
+    const providerAttributes = getProviderAttributes();
+    const licenseExpiryDate = providerAttributes.find(
+      (attr) => attr.attributeType?.uuid === licenseExpiryDateAttributeType && attr.value,
+    );
+
+    if (licenseExpiryDate?.value) {
+      const date = new Date(licenseExpiryDate.value);
+      return [
+        date.getFullYear(),
+        String(date.getDate()).padStart(2, '0'),
+        String(date.getMonth() + 1).padStart(2, '0'),
+      ].join('-');
+    }
+
+    return '';
+  }
+
   const isInitialValuesEmpty = Object.keys(initialUserValue).length === 0;
   type UserFormSchema = z.infer<typeof userManagementFormSchema>;
-  const formDefaultValues =
-    Object.keys(initialUserValue).length > 0
-      ? {
-          ...initialUserValue,
-          ...extractNameParts(initialUserValue.person?.display || ''),
-          phoneNumber: extractAttributeValue(initialUserValue.person?.attributes, 'Telephone'),
-          email: extractAttributeValue(initialUserValue.person?.attributes, 'Email'),
-          roles:
-            initialUserValue.roles?.map((role) => ({
-              uuid: role.uuid,
-              display: role.display,
-              description: role.description,
-            })) || [],
-          gender: initialUserValue.person?.gender || 'M',
-        }
-      : {};
+  const formDefaultValues = !isInitialValuesEmpty
+    ? {
+        ...initialUserValue,
+        ...extractNameParts(initialUserValue.person?.display || ''),
+        phoneNumber: extractAttributeValue(initialUserValue.person?.attributes, 'Telephone'),
+        email: extractAttributeValue(initialUserValue.person?.attributes, 'Email'),
+        roles:
+          initialUserValue.roles?.map((role) => ({
+            uuid: role.uuid,
+            display: role.display,
+            description: role.description,
+          })) || [],
+        gender: initialUserValue.person?.gender || 'M',
+        providerLicense: getProviderLicenseNumber(),
+        licenseExpiryDate: getProviderLicenseExpiryDate(),
+      }
+    : {};
 
   function extractNameParts(display = '') {
     const nameParts = display.split(' ');
@@ -101,7 +144,6 @@ const ManageUserWorkspace: React.FC<ManageUserWorkspaceProps> = ({
   const { roles = [], isLoading } = useRoles();
   const { rolesConfig, error } = useSystemUserRoleConfigSetting();
   const { attributeTypes = [] } = usePersonAttribute();
-  const { provider = [] } = useProvider(initialUserValue.systemId);
 
   useEffect(() => {
     if (isDirty) {
@@ -113,6 +155,19 @@ const ManageUserWorkspace: React.FC<ManageUserWorkspaceProps> = ({
     const emailAttribute = attributeTypes.find((attr) => attr.name === 'Email address')?.uuid || '';
     const telephoneAttribute = attributeTypes.find((attr) => attr.name === 'Telephone contact')?.uuid || '';
     const setProvider = data.providerIdentifiers;
+    const providerPayload: Partial<Provider> = {
+      attributes: [
+        {
+          attributeType: providerLicenseAttributeType,
+          value: data.providerLicense,
+        },
+        {
+          attributeType: licenseExpiryDateAttributeType,
+          value: data.licenseExpiryDate,
+        },
+      ],
+    };
+
     const payload: Partial<User> = {
       username: data.username,
       password: data.password,
@@ -144,7 +199,7 @@ const ManageUserWorkspace: React.FC<ManageUserWorkspaceProps> = ({
     };
 
     try {
-      const response = await createUser(payload, setProvider, initialUserValue?.uuid ?? '');
+      const response = await createUser(payload, setProvider, providerPayload, initialUserValue?.uuid ?? '');
 
       if (response.ok) {
         showSnackbar({
@@ -353,7 +408,9 @@ const ManageUserWorkspace: React.FC<ManageUserWorkspaceProps> = ({
                           <ChevronSortUp />
                         </CardHeader>
 
-                        {provider.length > 0 ? (
+                        {loadingProvider || providerError ? (
+                          <InlineLoading status="active" iconDescription="Loading" description="Loading data..." />
+                        ) : provider.length > 0 ? (
                           <>
                             <ResponsiveWrapper>
                               <Controller
@@ -373,26 +430,115 @@ const ManageUserWorkspace: React.FC<ManageUserWorkspaceProps> = ({
                                 )}
                               />
                             </ResponsiveWrapper>
+                            <ResponsiveWrapper>
+                              <Controller
+                                name="providerLicense"
+                                control={userFormMethods.control}
+                                render={({ field }) => (
+                                  <TextInput
+                                    {...field}
+                                    id="providerLicense"
+                                    type="text"
+                                    labelText={t('providerLicense', 'Provider License Number')}
+                                    placeholder={t('providerLicense', 'Provider License Number')}
+                                    className={styles.checkboxLabelSingleLine}
+                                  />
+                                )}
+                              />
+                            </ResponsiveWrapper>
+                            <ResponsiveWrapper>
+                              <Controller
+                                name="licenseExpiryDate"
+                                control={userFormMethods.control}
+                                render={({ field }) => (
+                                  <TextInput
+                                    {...field}
+                                    id="licenseExpiryDate"
+                                    type="date"
+                                    labelText={t('licenseExpiryDate', 'License Expiry Date')}
+                                    placeholder={t('licenseExpiryDate', 'License Expiry Date')}
+                                    className={styles.checkboxLabelSingleLine}
+                                  />
+                                )}
+                              />
+                            </ResponsiveWrapper>
                           </>
                         ) : (
-                          <Controller
-                            name="providerIdentifiers"
-                            control={userFormMethods.control}
-                            render={({ field }) => (
-                              <CheckboxGroup
-                                legendText={t('providerIdentifiers', 'Provider Details')}
-                                className={styles.multilineCheckboxLabel}>
-                                <Checkbox
-                                  className={styles.checkboxLabelSingleLine}
-                                  {...field}
-                                  id="providerIdentifiers"
-                                  labelText={t('providerIdentifiers', 'Create a Provider account for this user')}
-                                  checked={field.value || false}
-                                  onChange={(e) => field.onChange(e.target.checked)}
-                                />
-                              </CheckboxGroup>
+                          <>
+                            <Controller
+                              name="providerIdentifiers"
+                              control={userFormMethods.control}
+                              render={({ field }) => (
+                                <CheckboxGroup
+                                  legendText={t('providerIdentifiers', 'Provider Details')}
+                                  className={styles.multilineCheckboxLabel}>
+                                  <Checkbox
+                                    className={styles.checkboxLabelSingleLine}
+                                    {...field}
+                                    id="providerIdentifiers"
+                                    labelText={t('providerIdentifiers', 'Create a Provider account for this user')}
+                                    checked={field.value || false}
+                                    onChange={(e) => field.onChange(e.target.checked)}
+                                  />
+                                </CheckboxGroup>
+                              )}
+                            />
+
+                            {userFormMethods.watch('providerIdentifiers') && (
+                              <>
+                                <ResponsiveWrapper>
+                                  <Controller
+                                    name="systemId"
+                                    control={userFormMethods.control}
+                                    render={({ field }) => (
+                                      <TextInput
+                                        {...field}
+                                        id="systemId"
+                                        type="text"
+                                        labelText={t('providerId', 'Provider Id')}
+                                        placeholder={t('providerId', 'Provider Id')}
+                                        invalid={!!errors.systemId}
+                                        invalidText={errors.systemId?.message}
+                                        className={styles.checkboxLabelSingleLine}
+                                      />
+                                    )}
+                                  />
+                                </ResponsiveWrapper>
+                                <ResponsiveWrapper>
+                                  <Controller
+                                    name="providerLicense"
+                                    control={userFormMethods.control}
+                                    render={({ field }) => (
+                                      <TextInput
+                                        {...field}
+                                        id="providerLicense"
+                                        type="text"
+                                        labelText={t('providerLicense', 'Provider License Number')}
+                                        placeholder={t('providerLicense', 'Provider License Number')}
+                                        className={styles.checkboxLabelSingleLine}
+                                      />
+                                    )}
+                                  />
+                                </ResponsiveWrapper>
+                                <ResponsiveWrapper>
+                                  <Controller
+                                    name="licenseExpiryDate"
+                                    control={userFormMethods.control}
+                                    render={({ field }) => (
+                                      <TextInput
+                                        {...field}
+                                        id="licenseExpiryDate"
+                                        type="date"
+                                        labelText={t('licenseExpiryDate', 'License Expiry Date')}
+                                        placeholder={t('licenseExpiryDate', 'License Expiry Date')}
+                                        className={styles.checkboxLabelSingleLine}
+                                      />
+                                    )}
+                                  />
+                                </ResponsiveWrapper>
+                              </>
                             )}
-                          />
+                          </>
                         )}
                       </ResponsiveWrapper>
                     )}
