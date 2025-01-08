@@ -23,8 +23,8 @@ import {
   Select,
   PasswordInput,
   Column,
-  ClickableTile,
-  Tile,
+  ProgressIndicator,
+  ProgressStep,
 } from '@carbon/react';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -56,6 +56,7 @@ const ManageUserWorkspace: React.FC<ManageUserWorkspaceProps> = ({
   const { t } = useTranslation();
   const isTablet = useLayoutType() === 'tablet';
   const [activeSection, setActiveSection] = useState('demographic');
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   const { userManagementFormSchema } = UserManagementFormSchema();
 
@@ -246,36 +247,34 @@ const ManageUserWorkspace: React.FC<ManageUserWorkspaceProps> = ({
   }, [isDirty, promptBeforeClosing]);
 
   const toggleSection = (section) => {
-    setActiveSection((prev) => (prev === section ? null : section));
+    setActiveSection((prev) => (prev !== section ? section : prev));
   };
 
+  const steps = [
+    { id: 'demographic', label: t('demographicInformation', 'Demographic Info') },
+    { id: 'provider', label: t('providerAccount', 'Provider Account') },
+    { id: 'login', label: t('loginInformation', 'Login Info') },
+    { id: 'roles', label: t('roles', 'Roles Info') },
+  ];
+
   return (
-    <div className={styles.leftTabsContainer}>
+    <div className={styles.leftContainer}>
       <div>
-        <div className={styles.leftTabsLayout}>
-          <Tile className={styles.tabList}>
-            <ClickableTile
-              className={`${styles.listItem} ${activeSection === 'demographic' ? styles.active : ''}`}
-              onClick={() => toggleSection('demographic')}>
-              {t('demographicInformation', 'Demographic Info')}
-            </ClickableTile>
-            <ClickableTile
-              className={`${styles.listItem} ${activeSection === 'provider' ? styles.active : ''}`}
-              onClick={() => toggleSection('provider')}>
-              {t('providerAccount', 'Provider Account')}
-            </ClickableTile>
-            <ClickableTile
-              className={`${styles.listItem} ${activeSection === 'login' ? styles.active : ''}`}
-              onClick={() => toggleSection('login')}>
-              {t('loginInformation', 'Login Info')}
-            </ClickableTile>
-            <ClickableTile
-              className={`${styles.listItem} ${activeSection === 'roles' ? styles.active : ''}`}
-              onClick={() => toggleSection('roles')}>
-              {t('roles', 'Roles Info')}
-            </ClickableTile>
-          </Tile>
-          <div className={styles.tabPanels}>
+        <div className={styles.leftLayout}>
+          <ProgressIndicator
+            currentIndex={currentIndex}
+            spaceEquality={true}
+            vertical={true}
+            className={styles.progressIndicator}
+            onChange={(newIndex) => {
+              toggleSection(steps[newIndex].id);
+              setCurrentIndex(newIndex);
+            }}>
+            {steps.map((step, index) => (
+              <ProgressStep key={step.id} label={step.label} className={styles.ProgresStep} />
+            ))}
+          </ProgressIndicator>
+          <div className={styles.sections}>
             <FormProvider {...userFormMethods}>
               <form onSubmit={userFormMethods.handleSubmit(onSubmit, handleError)} className={styles.form}>
                 <div className={styles.formContainer}>
