@@ -102,10 +102,9 @@
   display: flex;
   flex-direction: column;
   min-width: 200px;
-  padding-top:layout.$spacing-03;
-  border-right: 1px solid colors.$gray-30; 
+  padding-top: layout.$spacing-03;
+  border-right: 1px solid colors.$gray-30;
 }
-
 
 .sections {
   flex: 1;
