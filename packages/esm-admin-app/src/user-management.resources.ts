@@ -1,6 +1,6 @@
 import { openmrsFetch, restBaseUrl } from '@openmrs/esm-framework';
 import useSWR, { mutate } from 'swr';
-import { AttributeType, Provider, ProviderAttributes, Role, User } from './config-schema';
+import { AttributeType, Provider, ProviderAttributes, ProviderLocation, Role, User } from './config-schema';
 
 export const useUser = () => {
   const url = `${restBaseUrl}/user?v=custom:(uuid,username,display,systemId,retired,person:(uuid,display,gender,names:(givenName,familyName,middleName),attributes:(uuid,display)),roles:(uuid,description,display,name))`;
@@ -54,7 +54,7 @@ export const createUser = async (
 
   const response = await postUser(user, url);
 
-  if (setProvider && response.person && response.person.uuid) {
+  if (setProvider || (response.person && response.person.uuid)) {
     const personUUID = response.person.uuid;
     const identifier = response.systemId;
     return await createProvider(personUUID, identifier, attributes);
@@ -113,5 +113,17 @@ export const useProviderAttributeType = () => {
     providerAttributeType: data?.data?.results,
     isLoading,
     error,
+  };
+};
+
+export const useLocation = () => {
+  const url = `${restBaseUrl}/location?v=custom:(uuid,name,description,retired,attributes:(value))`;
+  const { data, isLoading, error } = useSWR<{ data: { results: Array<ProviderLocation> } }>(url, openmrsFetch, {
+    errorRetryCount: 2,
+  });
+  return {
+    location: data?.data?.results,
+    loadingLocation: isLoading,
+    locationError: error,
   };
 };

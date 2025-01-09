@@ -25,6 +25,7 @@ import {
   Column,
   ProgressIndicator,
   ProgressStep,
+  ComboBox,
 } from '@carbon/react';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -36,6 +37,7 @@ import {
   usePersonAttribute,
   useProvider,
   useProviderAttributeType,
+  useLocation,
 } from '../../../user-management.resources';
 import UserManagementFormSchema from '../userManagementFormSchema';
 import { CardHeader } from '@openmrs/esm-patient-common-lib/src';
@@ -65,8 +67,11 @@ const ManageUserWorkspace: React.FC<ManageUserWorkspaceProps> = ({
     providerAttributeType.find((type) => type.name === 'Practising License Number')?.uuid || '';
   const licenseExpiryDateAttributeType =
     providerAttributeType.find((type) => type.name === 'License Expiry Date')?.uuid || '';
+  const primaryFacilityAttributeType =
+    providerAttributeType.find((type) => type.name === 'Primary Facility')?.uuid || '';
 
   const { provider = [], loadingProvider, providerError } = useProvider(initialUserValue.systemId);
+  const { location, loadingLocation } = useLocation();
 
   function getProviderAttributes() {
     if (!Array.isArray(provider)) {
@@ -80,7 +85,19 @@ const ManageUserWorkspace: React.FC<ManageUserWorkspaceProps> = ({
     const providerLicense = providerAttributes.find(
       (attr) => attr.attributeType?.uuid === providerLicenseAttributeType && attr.value,
     );
-    return providerLicense?.value || '';
+    return providerLicense?.value;
+  }
+
+  function getPrimaryFacility() {
+    const providerAttributes = getProviderAttributes();
+    const primaryFacility = providerAttributes.find(
+      (attr) => attr.attributeType?.uuid === primaryFacilityAttributeType && attr.value,
+    );
+    if (primaryFacility && primaryFacility.value) {
+      if (typeof primaryFacility.value === 'object' && primaryFacility.value !== null) {
+        return primaryFacility.value?.name;
+      }
+    }
   }
 
   function getProviderLicenseExpiryDate() {
@@ -93,12 +110,10 @@ const ManageUserWorkspace: React.FC<ManageUserWorkspaceProps> = ({
       const date = new Date(licenseExpiryDate.value);
       return [
         date.getFullYear(),
-        String(date.getDate()).padStart(2, '0'),
         String(date.getMonth() + 1).padStart(2, '0'),
+        String(date.getDate()).padStart(2, '0'),
       ].join('-');
     }
-
-    return '';
   }
 
   const isInitialValuesEmpty = Object.keys(initialUserValue).length === 0;
@@ -118,6 +133,7 @@ const ManageUserWorkspace: React.FC<ManageUserWorkspaceProps> = ({
         gender: initialUserValue.person?.gender || 'M',
         providerLicense: getProviderLicenseNumber(),
         licenseExpiryDate: getProviderLicenseExpiryDate(),
+        primaryFacility: getPrimaryFacility(),
       }
     : {};
 
@@ -156,8 +172,14 @@ const ManageUserWorkspace: React.FC<ManageUserWorkspaceProps> = ({
     const emailAttribute = attributeTypes.find((attr) => attr.name === 'Email address')?.uuid || '';
     const telephoneAttribute = attributeTypes.find((attr) => attr.name === 'Telephone contact')?.uuid || '';
     const setProvider = data.providerIdentifiers;
+    const facility = data.primaryFacility.split(' ');
+    const mflCode = facility[facility.length - 1];
     const providerPayload: Partial<Provider> = {
       attributes: [
+        {
+          attributeType: primaryFacilityAttributeType,
+          value: mflCode,
+        },
         {
           attributeType: providerLicenseAttributeType,
           value: data.providerLicense,
@@ -431,6 +453,39 @@ const ManageUserWorkspace: React.FC<ManageUserWorkspaceProps> = ({
                             </ResponsiveWrapper>
                             <ResponsiveWrapper>
                               <Controller
+                                name="primaryFacility"
+                                control={userFormMethods.control}
+                                render={({ field }) => (
+                                  <ComboBox
+                                    {...field}
+                                    id="primaryFacility"
+                                    items={location}
+                                    itemToString={(item) => {
+                                      if (!item) {
+                                        return '';
+                                      }
+                                      const attributeValue = item.attributes?.[0]?.value || '';
+                                      return `${item.name || ''} ${attributeValue}`.trim();
+                                    }}
+                                    titleText={t('primaryFacility', 'Primary Facility')}
+                                    selectedItem={
+                                      location.find((item) => `${item.name || ''}`.trim() === field.value) || null
+                                    }
+                                    onChange={({ selectedItem }) => {
+                                      if (selectedItem) {
+                                        const attributeValue = selectedItem.attributes?.[0]?.value || '';
+                                        const formattedString = `${selectedItem.name || ''} ${attributeValue}`.trim();
+                                        field.onChange(formattedString);
+                                      } else {
+                                        field.onChange('');
+                                      }
+                                    }}
+                                  />
+                                )}
+                              />
+                            </ResponsiveWrapper>
+                            <ResponsiveWrapper>
+                              <Controller
                                 name="providerLicense"
                                 control={userFormMethods.control}
                                 render={({ field }) => (
@@ -499,6 +554,45 @@ const ManageUserWorkspace: React.FC<ManageUserWorkspaceProps> = ({
                                         invalid={!!errors.systemId}
                                         invalidText={errors.systemId?.message}
                                         className={styles.checkboxLabelSingleLine}
+                                      />
+                                    )}
+                                  />
+                                </ResponsiveWrapper>
+                                <ResponsiveWrapper>
+                                  <Controller
+                                    name="primaryFacility"
+                                    control={userFormMethods.control}
+                                    render={({ field }) => (
+                                      <ComboBox
+                                        {...field}
+                                        id="primaryFacility"
+                                        items={location}
+                                        itemToString={(item) => {
+                                          if (!item) {
+                                            return '';
+                                          }
+                                          const attributeValue = item.attributes?.[0]?.value || '';
+                                          return `${item.name || ''} ${attributeValue}`.trim();
+                                        }}
+                                        titleText={t('primaryFacility', 'Primary Facility')}
+                                        selectedItem={
+                                          location.find(
+                                            (item) =>
+                                              `${item.name || ''} ${item.attributes?.[0]?.value || ''}`.trim() ===
+                                              field.value,
+                                          ) || null
+                                        }
+                                        onChange={({ selectedItem }) => {
+                                          if (selectedItem) {
+                                            const attributeValue = selectedItem.attributes?.[0]?.value || '';
+                                            const formattedString = `${
+                                              selectedItem.name || ''
+                                            } ${attributeValue}`.trim();
+                                            field.onChange(formattedString);
+                                          } else {
+                                            field.onChange('');
+                                          }
+                                        }}
                                       />
                                     )}
                                   />

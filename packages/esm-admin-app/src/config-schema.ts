@@ -36,7 +36,6 @@ export interface User {
   roles: Array<Role>;
   retired: boolean;
   resourceVersion: string;
-  provider: Provider;
 }
 
 export interface Name {
@@ -77,7 +76,7 @@ export interface ProviderAttributes {
 
 export interface AttributeItems {
   attributeType?: AttributeType;
-  value?: string;
+  value?: any;
 }
 
 export interface AttributeType {
@@ -87,7 +86,15 @@ export interface AttributeType {
   name?: string;
 }
 
-export interface attributeValue {
+export interface AttributeValue {
   name?: string;
   uuid?: string;
+}
+
+export interface ProviderLocation {
+  uuid: string;
+  name?: string;
+  description?: string;
+  retired: boolean;
+  attributes?: Array<AttributeItems>;
 }

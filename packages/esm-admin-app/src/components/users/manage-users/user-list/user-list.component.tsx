@@ -19,7 +19,7 @@ import {
 import { Edit, UserFollow } from '@carbon/react/icons';
 import styles from './user-list.scss';
 import { launchWorkspace, useDebounce, WorkspaceContainer } from '@openmrs/esm-framework';
-import { useUser } from '../../../../user-management.resources';
+import { useProvider, useUser } from '../../../../user-management.resources';
 
 const UserList: React.FC = () => {
   const { t } = useTranslation();
@@ -127,6 +127,7 @@ const UserList: React.FC = () => {
             iconDescription={t('edit', 'Edit')}
             onClick={() => {
               const selectedUser = users.find((u) => u.uuid === user.uuid);
+
               if (selectedUser) {
                 launchWorkspace('manage-user-workspace', {
                   workspaceTitle: t('editUser', 'Edit User'),
