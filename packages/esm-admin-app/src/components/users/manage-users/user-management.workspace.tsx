@@ -452,37 +452,46 @@ const ManageUserWorkspace: React.FC<ManageUserWorkspaceProps> = ({
                               />
                             </ResponsiveWrapper>
                             <ResponsiveWrapper>
-                              <Controller
-                                name="primaryFacility"
-                                control={userFormMethods.control}
-                                render={({ field }) => (
-                                  <ComboBox
-                                    {...field}
-                                    id="primaryFacility"
-                                    items={location}
-                                    itemToString={(item) => {
-                                      if (!item) {
-                                        return '';
+                              {loadingLocation ? (
+                                <InlineLoading
+                                  status="active"
+                                  iconDescription="Loading"
+                                  description="Loading data..."
+                                />
+                              ) : (
+                                <Controller
+                                  name="primaryFacility"
+                                  control={userFormMethods.control}
+                                  render={({ field }) => (
+                                    <ComboBox
+                                      {...field}
+                                      id="primaryFacility"
+                                      items={location}
+                                      itemToString={(item) => {
+                                        if (!item) {
+                                          return '';
+                                        }
+                                        const attributeValue = item.attributes?.[0]?.value || '';
+                                        return `${item.name || ''} ${attributeValue}`.trim();
+                                      }}
+                                      titleText={t('primaryFacility', 'Primary Facility')}
+                                      selectedItem={
+                                        (location || []).find((item) => `${item.name || ''}`.trim() === field.value) ||
+                                        null
                                       }
-                                      const attributeValue = item.attributes?.[0]?.value || '';
-                                      return `${item.name || ''} ${attributeValue}`.trim();
-                                    }}
-                                    titleText={t('primaryFacility', 'Primary Facility')}
-                                    selectedItem={
-                                      location.find((item) => `${item.name || ''}`.trim() === field.value) || null
-                                    }
-                                    onChange={({ selectedItem }) => {
-                                      if (selectedItem) {
-                                        const attributeValue = selectedItem.attributes?.[0]?.value || '';
-                                        const formattedString = `${selectedItem.name || ''} ${attributeValue}`.trim();
-                                        field.onChange(formattedString);
-                                      } else {
-                                        field.onChange('');
-                                      }
-                                    }}
-                                  />
-                                )}
-                              />
+                                      onChange={({ selectedItem }) => {
+                                        if (selectedItem) {
+                                          const attributeValue = selectedItem.attributes?.[0]?.value || '';
+                                          const formattedString = `${selectedItem.name || ''} ${attributeValue}`.trim();
+                                          field.onChange(formattedString);
+                                        } else {
+                                          field.onChange('');
+                                        }
+                                      }}
+                                    />
+                                  )}
+                                />
+                              )}
                             </ResponsiveWrapper>
                             <ResponsiveWrapper>
                               <Controller
@@ -559,43 +568,49 @@ const ManageUserWorkspace: React.FC<ManageUserWorkspaceProps> = ({
                                   />
                                 </ResponsiveWrapper>
                                 <ResponsiveWrapper>
-                                  <Controller
-                                    name="primaryFacility"
-                                    control={userFormMethods.control}
-                                    render={({ field }) => (
-                                      <ComboBox
-                                        {...field}
-                                        id="primaryFacility"
-                                        items={location}
-                                        itemToString={(item) => {
-                                          if (!item) {
-                                            return '';
+                                  {loadingLocation ? (
+                                    <InlineLoading
+                                      status="active"
+                                      iconDescription="Loading"
+                                      description="Loading data..."
+                                    />
+                                  ) : (
+                                    <Controller
+                                      name="primaryFacility"
+                                      control={userFormMethods.control}
+                                      render={({ field }) => (
+                                        <ComboBox
+                                          {...field}
+                                          id="primaryFacility"
+                                          items={location}
+                                          itemToString={(item) => {
+                                            if (!item) {
+                                              return '';
+                                            }
+                                            const attributeValue = item.attributes?.[0]?.value || '';
+                                            return `${item.name || ''} ${attributeValue}`.trim();
+                                          }}
+                                          titleText={t('primaryFacility', 'Primary Facility')}
+                                          selectedItem={
+                                            (location || []).find(
+                                              (item) => `${item.name || ''}`.trim() === field.value,
+                                            ) || null
                                           }
-                                          const attributeValue = item.attributes?.[0]?.value || '';
-                                          return `${item.name || ''} ${attributeValue}`.trim();
-                                        }}
-                                        titleText={t('primaryFacility', 'Primary Facility')}
-                                        selectedItem={
-                                          location.find(
-                                            (item) =>
-                                              `${item.name || ''} ${item.attributes?.[0]?.value || ''}`.trim() ===
-                                              field.value,
-                                          ) || null
-                                        }
-                                        onChange={({ selectedItem }) => {
-                                          if (selectedItem) {
-                                            const attributeValue = selectedItem.attributes?.[0]?.value || '';
-                                            const formattedString = `${
-                                              selectedItem.name || ''
-                                            } ${attributeValue}`.trim();
-                                            field.onChange(formattedString);
-                                          } else {
-                                            field.onChange('');
-                                          }
-                                        }}
-                                      />
-                                    )}
-                                  />
+                                          onChange={({ selectedItem }) => {
+                                            if (selectedItem) {
+                                              const attributeValue = selectedItem.attributes?.[0]?.value || '';
+                                              const formattedString = `${
+                                                selectedItem.name || ''
+                                              } ${attributeValue}`.trim();
+                                              field.onChange(formattedString);
+                                            } else {
+                                              field.onChange('');
+                                            }
+                                          }}
+                                        />
+                                      )}
+                                    />
+                                  )}
                                 </ResponsiveWrapper>
                                 <ResponsiveWrapper>
                                   <Controller
